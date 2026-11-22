@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rules
+  namespace: rules
+  labels:
+    app: rules
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: rules
+  template:
+    metadata:
+      labels:
+        app: rules
+    spec:
+      containers:
+      - name: nginx
+        image: nginxinc/nginx-unprivileged:alpine
+        ports:
+        - containerPort: 8080
+          name: http
+        volumeMounts:
+        - name: site
+          mountPath: /usr/share/nginx/html
+          readOnly: true
+        livenessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 15
+        readinessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          requests:
+            cpu: 25m
+            memory: 64Mi
+          limits:
+            cpu: 200m
+            memory: 128Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+          runAsNonRoot: true
+          runAsUser: 101
+          readOnlyRootFilesystem: false
+      volumes:
+      - name: site
+        configMap:
+          name: rules-site
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rules
+  namespace: rules
+  labels:
+    app: rules
+spec:
+  selector:
+    app: rules
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rules
+  namespace: rules
+  labels:
+    app: rules
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: rules.holm.team
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: rules
+            port:
+              number: 80
