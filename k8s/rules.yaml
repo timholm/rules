@@ -70,24 +70,3 @@ spec:
   - name: http
     port: 80
     targetPort: 8080
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: rules
-  namespace: rules
-  labels:
-    app: rules
-spec:
-  ingressClassName: nginx
-  rules:
-  - host: rules.holm.team
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: rules
-            port:
-              number: 80
